@@ -75,18 +75,22 @@ def index(request):
                 error = "Error: Could not find city coordinates."
                 return render(request, "guides/index.html", {"form": form, "error": error})
 
-            route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
+            route_url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
             headers = {
-                "Authorization": f"Bearer {ORS_API_KEY}"  # Asegúrate del formato Bearer
+                "Authorization": f"Bearer {ORS_API_KEY}",
+                "Content-Type": "application/json"
             }
-            params = {
-                "start": f"{start_coords['longitude']},{start_coords['latitude']}",
-                "end": f"{end_coords['longitude']},{end_coords['latitude']}"
+            body = {
+                "coordinates": [
+                    [start_coords['longitude'], start_coords['latitude']],
+                    [end_coords['longitude'], end_coords['latitude']]
+                ]
             }
 
-            route_response = requests.get(route_url, headers=headers, params=params, timeout=10)
+            route_response = requests.post(route_url, headers=headers, json=body, timeout=10)
             route_response.raise_for_status()
             route_data = route_response.json()
+
 
             summary = route_data["features"][0]["properties"]["summary"]
             distance = summary["distance"] / 1000
