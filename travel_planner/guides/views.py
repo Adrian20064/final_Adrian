@@ -13,12 +13,29 @@ client = MongoClient(MONGO_URL)
 db = client["travel_db"]
 history_collection = db["queries"]
 
+GEO_DB_API_URL = os.getenv("geo_db_url")
 GEO_DB_URL = os.getenv("geo_db_key")
 OPENWEATHER_API_KEY = os.getenv("weather_api_key")
 OPENROUTE_API_KEY = os.getenv("heigit_key")
+def get_weather(city):
+    try:
+        response = requests.get(
+            f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric"
+        )
+        response.raise_for_status()
+        data = response.json()
+        return f"{data['main']['temp']}°C, {data['weather'][0]['description']}"
+    except Exception:
+        return "Weather data unavailable"
 
 def index(request):
-    cities = requests.get(GEO_DB_URL).json()["data"]
+    try:
+        response = requests.get(GEO_DB_URL)
+        response.raise_for_status()
+        cities = response.json().get("data", [])
+    except Exception:
+        cities = []  
+
     form = TripForm(cities=cities)
 
     if request.method == "POST":
@@ -27,19 +44,22 @@ def index(request):
             start_city = form.cleaned_data['start_city']
             end_city = form.cleaned_data['end_city']
 
-            def get_weather(city):
-                w = requests.get(
-                    f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric"
-                ).json()
-                return f"{w['main']['temp']}°C, {w['weather'][0]['description']}"
-
             start_weather = get_weather(start_city)
             end_weather = get_weather(end_city)
 
-            start_coords = next(c for c in cities if c["name"] == start_city)
-            end_coords = next(c for c in cities if c["name"] == end_city)
+            start_coords = next((c for c in cities if c["name"] == start_city), None)
+            end_coords = next((c for c in cities if c["name"] == end_city), None)
 
-            route_url = f"https://api.openrouteservice.org/v2/directions/driving-car?api_key={OPENROUTE_API_KEY}&start={start_coords['longitude']},{start_coords['latitude']}&end={end_coords['longitude']},{end_coords['latitude']}"
+            if not start_coords or not end_coords:
+                error = "Error: Could not find city coordinates."
+                return render(request, "guides/index.html", {"form": form, "error": error})
+
+            route_url = (
+                f"https://api.openrouteservice.org/v2/directions/driving-car"
+                f"?api_key={OPENROUTE_API_KEY}"
+                f"&start={start_coords['longitude']},{start_coords['latitude']}"
+                f"&end={end_coords['longitude']},{end_coords['latitude']}"
+            )
             route_data = requests.get(route_url).json()
 
             distance = route_data["features"][0]["properties"]["summary"]["distance"] / 1000
@@ -57,10 +77,14 @@ def index(request):
             })
 
             return render(request, "guides/result.html", {
-                "start": start_city, "end": end_city,
-                "start_weather": start_weather, "end_weather": end_weather,
-                "distance": distance, "duration": duration,
-                "steps": steps, "advice": advice
+                "start": start_city,
+                "end": end_city,
+                "start_weather": start_weather,
+                "end_weather": end_weather,
+                "distance": distance,
+                "duration": duration,
+                "steps": steps,
+                "advice": advice
             })
 
     return render(request, "guides/index.html", {"form": form})
