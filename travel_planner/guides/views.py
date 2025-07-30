@@ -74,8 +74,8 @@ def get_advice(weather, time):
 
 def index(request):
     cities = get_bc_cities()
-    form = TravelForm(cities=cities)
-    return render(request, 'guides/index.html', {"form": form})
+    return render(request, 'guides/index.html', {"cities": cities})
+
 
 def result(request):
     if request.method == "POST":
