@@ -17,12 +17,19 @@ db = client["travel_planner"]
 history_collection = db["history"]
 
 
-
 def get_bc_cities():
     url = "http://geodb-free-service.wirefreethought.com/v1/geo/countries/CA/regions/BC/cities?limit=20"
     headers = {"X-RapidAPI-Key": GEO_API_KEY}
     response = requests.get(url, headers=headers)
-    cities = response.json()["data"]
+
+    print(response.status_code)
+    print(response.text)  # para ver qué devuelve la API
+
+    data = response.json()
+    if "data" not in data:
+        raise ValueError(f"La respuesta de la API no contiene 'data': {data}")
+
+    cities = data["data"]
     return sorted([city["city"] for city in cities])
 
 def get_weather(city):
