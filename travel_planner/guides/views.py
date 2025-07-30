@@ -36,7 +36,6 @@ def index(request):
             start_weather = get_weather(start_city)
             end_weather = get_weather(end_city)
 
-            
             start_coords = next(c for c in cities if c["name"] == start_city)
             end_coords = next(c for c in cities if c["name"] == end_city)
 
@@ -65,3 +64,9 @@ def index(request):
             })
 
     return render(request, "guides/index.html", {"form": form})
+
+def history(request):
+    records = list(history_collection.find().sort("timestamp", -1))
+    for r in records:
+        r["timestamp"] = r["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+    return render(request, "guides/history.html", {"records": records})
