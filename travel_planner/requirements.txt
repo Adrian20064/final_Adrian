@@ -1,5 +1,4 @@
-django
+Django==5.2
 requests
 pymongo
-dnspython
 python-dotenv

@@ -1,22 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <title>Smart Travel Planner</title>
+    <title>Smart Travel Planner FROM ADRIAN CARRASCO</title>
   </head>
   <body>
-    <h1>Smart Travel Planner - Adrian Carrasco</h1>
-    <form method="POST">
-      {% csrf_token %} {{ form.start_city.label_tag }}<br />
-      {{ form.start_city }}<br /><br />
-
-      {{ form.end_city.label_tag }}<br />
-      {{ form.end_city }}<br /><br />
-
-      <button type="submit">Plan Trip</button>
+    <h1>Smart Travel Planner – Adrian Carrasco</h1>
+    <form action="/result/" method="post">
+      {% csrf_token %}
+      <label>Start City:</label>
+      <select name="start_city">
+        {% for city in cities %}
+        <option>{{ city }}</option>
+        {% endfor %}
+      </select>
+      <br />
+      <label>End City:</label>
+      <select name="end_city">
+        {% for city in cities %}
+        <option>{{ city }}</option>
+        {% endfor %}
+      </select>
+      <br />
+      <input type="submit" value="Plan My Trip" />
     </form>
-
     <br />
-    <a href="{% url 'history' %}">View History</a>
+    <a href="/history/">View Travel History</a>
   </body>
 </html>

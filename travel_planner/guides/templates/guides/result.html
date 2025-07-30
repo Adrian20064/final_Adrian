@@ -1,33 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
-  <!--html-->
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trip Results</title>
+    <title>Trip Result</title>
   </head>
   <body>
-    <h1>Trip from {{ start }} to {{ end }}</h1>
-
-    <h3>Weather</h3>
-    <p>{{ start }}: {{ start_weather }}</p>
-    <p>{{ end }}: {{ end_weather }}</p>
-
-    <h3>Route Information</h3>
-    <p>Distance: {{ distance|floatformat:2 }} km</p>
-    <p>Duration: {{ duration|floatformat:2 }} minutes</p>
-
-    <h3>Route Steps</h3>
+    <h2>Trip from {{ start }} to {{ end }}</h2>
+    <p>
+      <strong>{{ start }} Weather:</strong> {{ start_weather.temp }}°C, {{
+      start_weather.desc }}
+    </p>
+    <p>
+      <strong>{{ end }} Weather:</strong> {{ end_weather.temp }}°C, {{
+      end_weather.desc }}
+    </p>
+    <hr />
+    <p><strong>Distance:</strong> {{ route.distance }} km</p>
+    <p><strong>Estimated Time:</strong> {{ route.duration }} minutes</p>
+    <h3>Route Steps:</h3>
     <ol>
-      {% for step in steps %}
-      <li>{{ step }}</li>
+      {% for step in route.steps %}
+      <li>{{ step.text }} ({{ step.distance }} m)</li>
       {% endfor %}
     </ol>
-
-    <h3>Advice</h3>
-    <p>{{ advice }}</p>
-
-    <br />
-    <a href="{% url 'index' %}">Back to Home</a>
+    <p><strong>Advice:</strong> {{ advice }}</p>
+    <a href="/">Back</a>
   </body>
-</@html>
+</html>

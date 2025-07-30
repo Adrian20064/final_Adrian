@@ -1,32 +1,18 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Trip Results</title>
+    <title>History</title>
   </head>
   <body>
-    <h1>Trip from {{ start }} to {{ end }}</h1>
-
-    <h3>Weather</h3>
-    <p>{{ start }}: {{ start_weather }}</p>
-    <p>{{ end }}: {{ end_weather }}</p>
-
-    <h3>Route Information</h3>
-    <p>Distance: {{ distance|floatformat:2 }} km</p>
-    <p>Duration: {{ duration|floatformat:2 }} minutes</p>
-
-    <h3>Route Steps</h3>
-    <ol>
-      {% for step in steps %}
-      <li>{{ step }}</li>
+    <h2>Travel Query History</h2>
+    <ul>
+      {% for record in results %}
+      <li>
+        {{ record.timestamp }} - {{ record.start_city }} to {{ record.end_city
+        }} ({{ record.route.distance }} km)
+      </li>
       {% endfor %}
-    </ol>
-
-    <h3>Advice</h3>
-    <p>{{ advice }}</p>
-
-    <br />
-    <a href="{% url 'index' %}">Back to Home</a>
+    </ul>
+    <a href="/">Back to Planner</a>
   </body>
 </html>
