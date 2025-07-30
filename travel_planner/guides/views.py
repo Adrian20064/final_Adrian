@@ -70,7 +70,7 @@ def index(request):
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
             headers = {
-                "Authorization": ORS_API_KEY
+                "Authorization": ORS_API_KEY 
             }
             params = {
                 "start": f"{start_coords['longitude']},{start_coords['latitude']}",
