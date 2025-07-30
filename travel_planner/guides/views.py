@@ -44,15 +44,22 @@ def get_weather(city):
 
 
 def get_route(start_coords, end_coords):
-    url = "https://api.openrouteservice.org/v2/directions/driving-car"
-    headers = {"Authorization": ROUTES_API_KEY}
-    body = {
-        "coordinates": [[start_coords["lon"], start_coords["lat"]], [end_coords["lon"], end_coords["lat"]]]
+    url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
+    headers = {
+        "Authorization": ROUTES_API_KEY,
+        "Content-Type": "application/json"
     }
+    body = {
+        "coordinates": [
+            [start_coords["lon"], start_coords["lat"]],
+            [end_coords["lon"], end_coords["lat"]]
+        ]
+    }
+
     res = requests.post(url, json=body, headers=headers)
     data = res.json()
 
-    if "features" not in data or len(data["features"]) == 0:
+    if "features" not in data or not data["features"]:
         raise ValueError(f"Route API error or no route found: {data}")
 
     route = data["features"][0]["properties"]
@@ -66,7 +73,8 @@ def get_route(start_coords, end_coords):
             } for step in route["segments"][0]["steps"]
         ]
     }
-
+    
+    
 def get_advice(weather, time):
     if weather["desc"] in ["clear sky", "few clouds"] and 6 <= time.hour <= 18:
         return "Good time to start your trip!"
