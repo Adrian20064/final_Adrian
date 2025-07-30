@@ -70,7 +70,7 @@ def index(request):
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
             headers = {
-                "Authorization": ORS_API_KEY,
+                "Authorization": f'Bearer {ORS_API_KEY}',
                 "Content-Type": "application/json"
             }
             body = {
