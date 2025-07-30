@@ -15,7 +15,7 @@ history_collection = db["queries"]
 
 GEO_DB_API_URL = os.getenv("geo_db_url")
 OPENWEATHER_API_KEY = os.getenv("weather_api_key")
-OPENROUTE_API_KEY = os.getenv("heigit_key")
+ORS_API_KEY = os.getenv("ORS_API_KEY")
 
 def get_weather(city):
     try:
@@ -69,12 +69,18 @@ def index(request):
                 return render(request, "guides/index.html", {"form": form, "error": error})
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
-            params = {
-                "api_key": OPENROUTE_API_KEY,
-                "start": f"{start_coords['longitude']},{start_coords['latitude']}",
-                "end": f"{end_coords['longitude']},{end_coords['latitude']}",
+            headers = {
+                "Authorization": ORS_API_KEY,
+                "Content-Type": "application/json"
             }
-            route_response = requests.get(route_url, params=params, timeout=10)
+            body = {
+                "coordinates": [
+                    [start_coords["longitude"], start_coords["latitude"]],
+                    [end_coords["longitude"], end_coords["latitude"]]
+                ]
+            }
+
+            route_response = requests.post(route_url, json=body, headers=headers, timeout=10)
             route_response.raise_for_status()
             route_data = route_response.json()
 
