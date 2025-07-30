@@ -1,12 +1,9 @@
-import os
 import requests
 from datetime import datetime
 from django.shortcuts import render, redirect
 from .forms import TravelForm
-from dotenv import load_dotenv
 from pymongo import MongoClient
 from django.contrib import messages
-
 
 GEO_API_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"
 WEATHER_API_KEY = "01fc4f1f8daea0e2af1d3bbf3cc4f0fb"
@@ -16,7 +13,6 @@ MONGO_URI = "mongodb://54.172.19.24:27017"
 client = MongoClient(MONGO_URI)
 db = client["travel_planner"]
 history_collection = db["history"]
-
 
 def get_bc_cities():
     url = "http://geodb-free-service.wirefreethought.com/v1/geo/countries/CA/regions/BC/cities?limit=10"
@@ -28,20 +24,33 @@ def get_bc_cities():
     cities = data["data"]
     return sorted([city["city"] for city in cities])
 
-def get_weather(city):
-    url = f"https://api.openweathermap.org/data/2.5/weather?q={city},CA&appid={WEATHER_API_KEY}&units=metric"
-    response = requests.get(url)
-    data = response.json()
-    
-    if response.status_code != 200 or "main" not in data:
-        raise ValueError(f"Weather API error for city '{city}': {data.get('message', 'Unknown error')}")
-    
+def get_city_coords(city_name):
+    url = f"http://geodb-free-service.wirefreethought.com/v1/geo/cities?namePrefix={city_name}&countryIds=CA&limit=1"
+    headers = {"X-RapidAPI-Key": GEO_API_KEY}
+    res = requests.get(url, headers=headers)
+    data = res.json()
+    if "data" not in data or not data["data"]:
+        raise ValueError(f"City '{city_name}' not found.")
+    city_data = data["data"][0]
+    return {"lat": city_data["latitude"], "lon": city_data["longitude"]}
+
+def get_weather_by_coords(lat, lon):
+    url = "https://api.openweathermap.org/data/2.5/weather"
+    params = {
+        "lat": lat,
+        "lon": lon,
+        "appid": WEATHER_API_KEY,
+        "units": "metric"
+    }
+    res = requests.get(url, params=params)
+    data = res.json()
+    if "weather" not in data:
+        raise ValueError(f"Weather API error at coords ({lat},{lon}): {data.get('message', 'Unknown error')}")
     return {
         "temp": data["main"]["temp"],
         "desc": data["weather"][0]["description"],
-        "coord": data["coord"]
+        "coord": {"lat": lat, "lon": lon}
     }
-
 
 def get_route(start_coords, end_coords):
     url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
@@ -55,13 +64,10 @@ def get_route(start_coords, end_coords):
             [end_coords["lon"], end_coords["lat"]]
         ]
     }
-
     res = requests.post(url, json=body, headers=headers)
     data = res.json()
-
     if "features" not in data or not data["features"]:
         raise ValueError(f"Route API error or no route found: {data}")
-
     route = data["features"][0]["properties"]
     return {
         "distance": round(route["segments"][0]["distance"] / 1000, 2),
@@ -73,18 +79,15 @@ def get_route(start_coords, end_coords):
             } for step in route["segments"][0]["steps"]
         ]
     }
-    
-    
+
 def get_advice(weather, time):
     if weather["desc"] in ["clear sky", "few clouds"] and 6 <= time.hour <= 18:
         return "Good time to start your trip!"
     return "Consider delaying your trip due to bad weather."
 
-
 def index(request):
     cities = get_bc_cities()
     return render(request, 'guides/index.html', {"cities": cities})
-
 
 def result(request):
     if request.method == "POST":
@@ -93,13 +96,13 @@ def result(request):
         if not start or not end:
             messages.error(request, "Please select both start and end cities.")
             return redirect("index")
-
         try:
-            start_weather = get_weather(start)
-            end_weather = get_weather(end)
-            route = get_route(start_weather['coord'], end_weather['coord'])
+            start_coords = get_city_coords(start)
+            end_coords = get_city_coords(end)
+            start_weather = get_weather_by_coords(start_coords["lat"], start_coords["lon"])
+            end_weather = get_weather_by_coords(end_coords["lat"], end_coords["lon"])
+            route = get_route(start_coords, end_coords)
             advice = get_advice(start_weather, datetime.now())
-
             entry = {
                 "start_city": start,
                 "end_city": end,
@@ -107,7 +110,6 @@ def result(request):
                 "route": route
             }
             history_collection.insert_one(entry)
-
             return render(request, 'guides/result.html', {
                 "start": start,
                 "end": end,
@@ -120,7 +122,6 @@ def result(request):
             print(f"Error in result view: {e}")
             messages.error(request, f"Error processing request: {e}")
             return redirect("index")
-
     return redirect("index")
 
 def history(request):
