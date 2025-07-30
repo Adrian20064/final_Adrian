@@ -1,130 +1,185 @@
-from django.shortcuts import render
-from .forms import TripForm
 import requests
+from django.shortcuts import render
+from django.http import HttpResponse
 from datetime import datetime
 from pymongo import MongoClient
 
-MONGO_URL = "mongodb://54.196.17.228:27017"
-client = MongoClient(MONGO_URL)
-db = client["travel_db"]
-history_collection = db["queries"]
+# MongoDB setup
+MONGO_URI = "mongodb://54.196.17.228:27017"
+mongo_client = MongoClient(MONGO_URI)
+database = mongo_client["travel_db"]
+history_collection = database["queries"]
 
-GEO_DB_API_URL = "https://wft-geo-db.p.rapidapi.com/v1/geo/countries/CA/regions/BC/cities?limit=20"
-GEO_DB_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"  # solo si la necesitas para headers
+# Your API keys
+GEO_DB_API_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"
 OPENWEATHER_API_KEY = "01fc4f1f8daea0e2af1d3bbf3cc4f0fb"
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY0ZmU0NDI3MTEzOWQxMjkzODFmYzllMDVkZDAxZWIyMTk4NzMyNjY1YzNiNjZmNGI0MDVlZjc4IiwiaCI6Im11cm11cjY0In0"
 
-def get_weather(city):
+def fetch_bc_cities():
+    endpoint = "https://wft-geo-db.p.rapidapi.com/v1/geo/countries/CA/regions/BC/cities?limit=20"
+    headers = {
+        "X-RapidAPI-Key": GEO_DB_API_KEY,
+        "X-RapidAPI-Host": "wft-geo-db.p.rapidapi.com"
+    }
+
     try:
-        response = requests.get(
-            f"http://api.openweathermap.org/data/2.5/weather",
-            params={"q": city, "appid": OPENWEATHER_API_KEY, "units": "metric"},
-            timeout=5
-        )
+        response = requests.get(endpoint, headers=headers, timeout=5)
+        response.raise_for_status()
+        cities_info = response.json().get("data", [])
+        if not cities_info:
+            return fallback_cities()
+        return [city["name"] for city in cities_info]
+    except Exception:
+        return fallback_cities()
+
+def fallback_cities():
+    # Static fallback list of BC cities
+    return [
+        "Vancouver", "Victoria", "Burnaby", "Richmond", "Surrey",
+        "Langley", "Abbotsford", "Coquitlam", "Kelowna", "Kamloops",
+        "Prince George", "Nanaimo", "Chilliwack", "Vernon", "Penticton",
+        "Mission", "North Vancouver", "New Westminster", "White Rock", "Delta"
+    ]
+
+def home_view(request):
+    cities = fetch_bc_cities()
+    return render(request, "index.html", {"cities": cities})
+
+def get_city_weather(city_name):
+    weather_api_url = "http://api.openweathermap.org/data/2.5/weather"
+    params = {
+        "q": f"{city_name},CA",
+        "appid": OPENWEATHER_API_KEY,
+        "units": "metric"
+    }
+    try:
+        response = requests.get(weather_api_url, params=params, timeout=5)
         response.raise_for_status()
         data = response.json()
-        return f"{data['main']['temp']}°C, {data['weather'][0]['description']}"
+        temp = data["main"]["temp"]
+        description = data["weather"][0]["description"]
+        return f"{temp}°C, {description}"
     except Exception:
         return "Weather data unavailable"
 
-def get_cities():
+def get_city_coordinates(city_name):
+    geo_api_url = f"https://wft-geo-db.p.rapidapi.com/v1/geo/countries/CA/regions/BC/cities?namePrefix={city_name}"
+    headers = {
+        "X-RapidAPI-Key": GEO_DB_API_KEY,
+        "X-RapidAPI-Host": "wft-geo-db.p.rapidapi.com"
+    }
+
     try:
-        # Si tu API geo-db requiere header x-rapidapi-key (según documentación)
-        headers = {
-            "X-RapidAPI-Key": GEO_DB_KEY,
-            "X-RapidAPI-Host": "wft-geo-db.p.rapidapi.com"
-        }
-        response = requests.get(GEO_DB_API_URL, headers=headers, timeout=5)
+        response = requests.get(geo_api_url, headers=headers, timeout=5)
         response.raise_for_status()
-        cities = response.json().get("data", [])
-        if not cities:
-            raise Exception("Empty cities list")
-        return cities
+        city_data_list = response.json().get("data", [])
+        if not city_data_list:
+            raise ValueError("City not found")
+
+        for city_data in city_data_list:
+            if city_data["name"].lower() == city_name.lower():
+                return city_data["latitude"], city_data["longitude"]
+
+        # If no exact match found, return first city's coords
+        first_city = city_data_list[0]
+        return first_city["latitude"], first_city["longitude"]
+
     except Exception:
-        fallback = [
-            {"name": "Victoria", "latitude": 48.4284, "longitude": -123.3656},
-            {"name": "Vancouver", "latitude": 49.2827, "longitude": -123.1207},
-            {"name": "Kelowna", "latitude": 49.8880, "longitude": -119.4960},
-            {"name": "Burnaby", "latitude": 49.2488, "longitude": -122.9805},
-            {"name": "Richmond", "latitude": 49.1666, "longitude": -123.1336},
-            {"name": "Surrey", "latitude": 49.1044, "longitude": -122.8011},
+        # Provide fallback coordinates for some common cities
+        fallback_coords = {
+            "vancouver": (49.2827, -123.1207),
+            "victoria": (48.4284, -123.3656),
+            "burnaby": (49.2488, -122.9805),
+            "richmond": (49.1666, -123.1336),
+            "surrey": (49.1913, -122.8490),
+            "kelowna": (49.8880, -119.4960),
+            "kamloops": (50.6745, -120.3273)
+        }
+        key = city_name.lower()
+        if key in fallback_coords:
+            return fallback_coords[key]
+        raise ValueError(f"Coordinates not found for city: {city_name}")
+
+def get_route(start_coords, end_coords):
+    url = "https://api.openrouteservice.org/v2/directions/driving-car"
+    headers = {
+        "Authorization": ORS_API_KEY,
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "coordinates": [
+            [start_coords[1], start_coords[0]],
+            [end_coords[1], end_coords[0]]
         ]
-        return fallback
+    }
+    response = requests.post(url, json=payload, headers=headers, timeout=10)
+    response.raise_for_status()
+    route_data = response.json()
+    if "features" not in route_data or not route_data["features"]:
+        raise ValueError("Invalid route response")
 
-def index(request):
-    cities = get_cities()
+    route_summary = route_data["features"][0]["properties"]["summary"]
+    route_steps = route_data["features"][0]["properties"]["segments"][0]["steps"]
+    return route_summary, route_steps
 
-    if request.method == "POST":
-        form = TripForm(request.POST, cities=cities)
-        if form.is_valid():
-            start_city = form.cleaned_data['start_city']
-            end_city = form.cleaned_data['end_city']
+def results_view(request):
+    start_city = request.GET.get("start_city")
+    end_city = request.GET.get("end_city")
 
-            # Validar que las ciudades no sean iguales
-            if start_city == end_city:
-                error = "Error: La ciudad de inicio y la ciudad de destino no pueden ser iguales."
-                return render(request, "guides/index.html", {"form": form, "error": error})
+    if not start_city or not end_city:
+        return HttpResponse("Please provide both start and end cities.", status=400)
 
-            start_weather = get_weather(start_city)
-            end_weather = get_weather(end_city)
+    weather_start = get_city_weather(start_city)
+    weather_end = get_city_weather(end_city)
 
-            start_coords = next((c for c in cities if c["name"] == start_city), None)
-            end_coords = next((c for c in cities if c["name"] == end_city), None)
+    try:
+        start_coords = get_city_coordinates(start_city)
+        end_coords = get_city_coordinates(end_city)
+    except ValueError as e:
+        return HttpResponse(str(e), status=400)
 
-            if not start_coords or not end_coords:
-                error = "Error: Could not find city coordinates."
-                return render(request, "guides/index.html", {"form": form, "error": error})
+    try:
+        summary, steps = get_route(start_coords, end_coords)
+    except Exception as e:
+        return HttpResponse(f"Failed to fetch route: {e}", status=400)
 
-            route_url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
-            headers = {
-                "Authorization": ORS_API_KEY,
-                "Content-Type": "application/json"
-            }
-            body = {
-                "coordinates": [
-                    [start_coords['longitude'], start_coords['latitude']],
-                    [end_coords['longitude'], end_coords['latitude']]
-                ]
-            }
+    current_hour = datetime.now().hour
+    advice = ("Good time to start your trip!" 
+              if "rain" not in weather_start.lower() and 6 <= current_hour <= 20 
+              else "Consider delaying your trip due to weather conditions.")
 
-            route_response = requests.post(route_url, headers=headers, json=body, timeout=10)
-            route_response.raise_for_status()
-            route_data = route_response.json()
+    # Save query to MongoDB
+    try:
+        history_collection.insert_one({
+            "start_city": start_city,
+            "end_city": end_city,
+            "timestamp": datetime.now(),
+            "distance_meters": summary["distance"],
+            "duration_seconds": summary["duration"],
+            "advice": advice
+        })
+    except Exception as err:
+        print(f"Warning: Failed to save history - {err}")
 
+    context = {
+        "start_city": start_city,
+        "end_city": end_city,
+        "weather_start": weather_start,
+        "weather_end": weather_end,
+        "distance_km": round(summary["distance"] / 1000, 2),
+        "duration_min": round(summary["duration"] / 60, 2),
+        "route_steps": steps,
+        "advice": advice,
+    }
+    return render(request, "results.html", context)
 
-            summary = route_data["features"][0]["properties"]["summary"]
-            distance = summary["distance"] / 1000
-            duration = summary["duration"] / 60
-            steps = [step["instruction"] for step in route_data["features"][0]["properties"]["segments"][0]["steps"]]
-
-            advice = "Good time to start your trip!" if "rain" not in start_weather.lower() else "Consider delaying your trip."
-
-            history_collection.insert_one({
-                "start": start_city,
-                "end": end_city,
-                "timestamp": datetime.now(),
-                "distance_km": distance,
-                "duration_min": duration
-            })
-
-            return render(request, "guides/result.html", {
-                "start": start_city,
-                "end": end_city,
-                "start_weather": start_weather,
-                "end_weather": end_weather,
-                "distance": distance,
-                "duration": duration,
-                "steps": steps,
-                "advice": advice
-            })
-    else:
-        form = TripForm(cities=cities)
-
-    return render(request, "guides/index.html", {"form": form})
-
-
-def history(request):
-    records = list(history_collection.find().sort("timestamp", -1))
-    for r in records:
-        r["timestamp"] = r["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
-    return render(request, "guides/history.html", {"records": records})
+def history_view(request):
+    try:
+        records = list(history_collection.find().sort("timestamp", -1))
+        # Format timestamps for display
+        for record in records:
+            if "timestamp" in record and hasattr(record["timestamp"], "strftime"):
+                record["timestamp"] = record["timestamp"].strftime("%Y-%m-%d %H:%M")
+        return render(request, "history.html", {"records": records})
+    except Exception as err:
+        return HttpResponse(f"Could not load history: {err}", status=500)
