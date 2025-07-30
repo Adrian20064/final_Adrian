@@ -54,7 +54,12 @@ def get_route(start_coords, end_coords):
         "coordinates": [[start_coords["lon"], start_coords["lat"]], [end_coords["lon"], end_coords["lat"]]]
     }
     res = requests.post(url, json=body, headers=headers)
-    route = res.json()["features"][0]["properties"]
+    data = res.json()
+
+    if "features" not in data or len(data["features"]) == 0:
+        raise ValueError(f"Route API error or no route found: {data}")
+
+    route = data["features"][0]["properties"]
     return {
         "distance": round(route["segments"][0]["distance"] / 1000, 2),
         "duration": round(route["segments"][0]["duration"] / 60, 2),
