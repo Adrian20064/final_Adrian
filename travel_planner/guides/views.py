@@ -8,15 +8,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URL = ("mongodb://54.196.17.228:27017")
+MONGO_URL = "mongodb://54.196.17.228:27017"
 client = MongoClient(MONGO_URL)
 db = client["travel_db"]
 history_collection = db["queries"]
 
 GEO_DB_API_URL = os.getenv("geo_db_url")
-GEO_DB_URL = os.getenv("geo_db_key")
+GEO_DB_KEY = os.getenv("geo_db_key")
 OPENWEATHER_API_KEY = os.getenv("weather_api_key")
 OPENROUTE_API_KEY = os.getenv("heigit_key")
+
 def get_weather(city):
     try:
         response = requests.get(
@@ -28,14 +29,20 @@ def get_weather(city):
     except Exception:
         return "Weather data unavailable"
 
-def index(request):
+def get_cities():
     try:
-        response = requests.get(GEO_DB_URL)
+        response = requests.get(GEO_DB_API_URL)
         response.raise_for_status()
         cities = response.json().get("data", [])
+        if not cities:
+            raise Exception()
+        return cities
     except Exception:
-        cities = []  
+        fallback = ["Victoria", "Vancouver", "Kelowna", "Burnaby", "Richmond", "Surrey"]
+        return [{"name": city} for city in fallback]
 
+def index(request):
+    cities = get_cities()
     form = TripForm(cities=cities)
 
     if request.method == "POST":
