@@ -13,7 +13,7 @@ client = MongoClient(MONGO_URL)
 db = client["travel_db"]
 history_collection = db["queries"]
 
-GEO_DB_URL = "http://geodb-free-service.wirefreethought.com/v1/geo/countries/CA/regions/BC/cities?limit=20"
+GEO_DB_URL = os.getenv("geo_db_key")
 OPENWEATHER_API_KEY = os.getenv("weather_api_key")
 OPENROUTE_API_KEY = os.getenv("heigit_key")
 
