@@ -1,28 +1,14 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>Trip Result</title>
-  </head>
-  <body>
-    <h2>Trip from {{ start }} to {{ end }}</h2>
-    <p>
-      <strong>{{ start }} Weather:</strong> {{ start_weather.temp }}°C, {{
-      start_weather.desc }}
-    </p>
-    <p>
-      <strong>{{ end }} Weather:</strong> {{ end_weather.temp }}°C, {{
-      end_weather.desc }}
-    </p>
-    <hr />
-    <p><strong>Distance:</strong> {{ route.distance }} km</p>
-    <p><strong>Estimated Time:</strong> {{ route.duration }} minutes</p>
-    <h3>Route Steps:</h3>
-    <ol>
-      {% for step in route.steps %}
-      <li>{{ step.text }} ({{ step.distance }} m)</li>
-      {% endfor %}
-    </ol>
-    <p><strong>Advice:</strong> {{ advice }}</p>
-    <a href="/">Back</a>
-  </body>
-</html>
+<h2>Trip Results</h2>
+<p>Start City: {{ start }}</p>
+<p>Temperature: {{ start_weather.temp }} °C</p>
+<p>End City: {{ end }}</p>
+<p>Temperature: {{ end_weather.temp }} °C</p>
+
+<h3>Route</h3>
+<p>Distance: {{ route.distance }} km</p>
+<p>Duration: {{ route.duration }} minutes</p>
+
+<h3>Advice</h3>
+<p>{{ advice }}</p>
+
+<a href="{% url 'index' %}">Plan another trip</a>

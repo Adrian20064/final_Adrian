@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect
 from .forms import TravelForm
 from dotenv import load_dotenv
 from pymongo import MongoClient
+from django.contrib import messages
 
 
 GEO_API_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"
@@ -79,10 +80,13 @@ def index(request):
 
 def result(request):
     if request.method == "POST":
-        form = TravelForm(request.POST)
-        if form.is_valid():
-            start = form.cleaned_data['start_city']
-            end = form.cleaned_data['end_city']
+        start = request.POST.get('start_city')
+        end = request.POST.get('end_city')
+        if not start or not end:
+            messages.error(request, "Please select both start and end cities.")
+            return redirect("index")
+
+        try:
             start_weather = get_weather(start)
             end_weather = get_weather(end)
             route = get_route(start_weather['coord'], end_weather['coord'])
@@ -104,6 +108,11 @@ def result(request):
                 "route": route,
                 "advice": advice
             })
+        except Exception as e:
+            print(f"Error in result view: {e}")
+            messages.error(request, f"Error processing request: {e}")
+            return redirect("index")
+
     return redirect("index")
 
 def history(request):
