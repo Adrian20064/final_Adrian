@@ -60,6 +60,11 @@ def index(request):
             start_city = form.cleaned_data['start_city']
             end_city = form.cleaned_data['end_city']
 
+            # Validar que las ciudades no sean iguales
+            if start_city == end_city:
+                error = "Error: La ciudad de inicio y la ciudad de destino no pueden ser iguales."
+                return render(request, "guides/index.html", {"form": form, "error": error})
+
             start_weather = get_weather(start_city)
             end_weather = get_weather(end_city)
 
@@ -72,7 +77,7 @@ def index(request):
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
             headers = {
-                "Authorization": ORS_API_KEY
+                "Authorization": f"Bearer {ORS_API_KEY}"  # Asegúrate del formato Bearer
             }
             params = {
                 "start": f"{start_coords['longitude']},{start_coords['latitude']}",
@@ -112,6 +117,7 @@ def index(request):
         form = TripForm(cities=cities)
 
     return render(request, "guides/index.html", {"form": form})
+
 
 def history(request):
     records = list(history_collection.find().sort("timestamp", -1))
