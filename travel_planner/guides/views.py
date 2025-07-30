@@ -70,17 +70,14 @@ def index(request):
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
             headers = {
-                "Authorization": ORS_API_KEY,
-                "Content-Type": "application/json"
+                "Authorization": ORS_API_KEY
             }
-            body = {
-                "coordinates": [
-                    [start_coords["longitude"], start_coords["latitude"]],
-                    [end_coords["longitude"], end_coords["latitude"]]
-                ]
+            params = {
+                "start": f"{start_coords['longitude']},{start_coords['latitude']}",
+                "end": f"{end_coords['longitude']},{end_coords['latitude']}"
             }
 
-            route_response = requests.post(route_url, json=body, headers=headers, timeout=10)
+            route_response = requests.get(route_url, headers=headers, params=params, timeout=10)
             route_response.raise_for_status()
             route_data = route_response.json()
 
