@@ -39,8 +39,15 @@ def get_cities():
             raise Exception("Empty cities list")
         return cities
     except Exception:
-        fallback = ["Victoria", "Vancouver", "Kelowna", "Burnaby", "Richmond", "Surrey"]
-        return [{"name": city} for city in fallback]
+        fallback = [
+        {"name": "Victoria", "latitude": 48.4284, "longitude": -123.3656},
+        {"name": "Vancouver", "latitude": 49.2827, "longitude": -123.1207},
+        {"name": "Kelowna", "latitude": 49.8880, "longitude": -119.4960},
+        {"name": "Burnaby", "latitude": 49.2488, "longitude": -122.9805},
+        {"name": "Richmond", "latitude": 49.1666, "longitude": -123.1336},
+        {"name": "Surrey", "latitude": 49.1044, "longitude": -122.8011},
+    ]
+    return fallback
 
 def index(request):
     cities = get_cities()
