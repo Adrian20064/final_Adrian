@@ -34,12 +34,18 @@ def get_bc_cities():
 
 def get_weather(city):
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city},CA&appid={WEATHER_API_KEY}&units=metric"
-    data = requests.get(url).json()
+    response = requests.get(url)
+    data = response.json()
+    
+    if response.status_code != 200 or "main" not in data:
+        raise ValueError(f"Weather API error for city '{city}': {data.get('message', 'Unknown error')}")
+    
     return {
         "temp": data["main"]["temp"],
         "desc": data["weather"][0]["description"],
         "coord": data["coord"]
     }
+
 
 def get_route(start_coords, end_coords):
     url = "https://api.openrouteservice.org/v2/directions/driving-car"
