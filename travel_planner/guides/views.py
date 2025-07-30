@@ -1,21 +1,18 @@
 from django.shortcuts import render
 from .forms import TripForm
 import requests
-import os
 from datetime import datetime
 from pymongo import MongoClient
-from dotenv import load_dotenv
-
-load_dotenv()
 
 MONGO_URL = "mongodb://54.196.17.228:27017"
 client = MongoClient(MONGO_URL)
 db = client["travel_db"]
 history_collection = db["queries"]
 
-GEO_DB_API_URL = os.getenv("geo_db_url")
-OPENWEATHER_API_KEY = os.getenv("weather_api_key")
-ORS_API_KEY = os.getenv("ORS_API_KEY")
+GEO_DB_API_URL = "https://wft-geo-db.p.rapidapi.com/v1/geo/countries/CA/regions/BC/cities?limit=20"
+GEO_DB_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"  # solo si la necesitas para headers
+OPENWEATHER_API_KEY = "01fc4f1f8daea0e2af1d3bbf3cc4f0fb"
+ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY0ZmU0NDI3MTEzOWQxMjkzODFmYzllMDVkZDAxZWIyMTk4NzMyNjY1YzNiNjZmNGI0MDVlZjc4IiwiaCI6Im11cm11cjY0In0"
 
 def get_weather(city):
     try:
@@ -32,7 +29,12 @@ def get_weather(city):
 
 def get_cities():
     try:
-        response = requests.get(GEO_DB_API_URL, timeout=5)
+        # Si tu API geo-db requiere header x-rapidapi-key (según documentación)
+        headers = {
+            "X-RapidAPI-Key": GEO_DB_KEY,
+            "X-RapidAPI-Host": "wft-geo-db.p.rapidapi.com"
+        }
+        response = requests.get(GEO_DB_API_URL, headers=headers, timeout=5)
         response.raise_for_status()
         cities = response.json().get("data", [])
         if not cities:
@@ -40,14 +42,14 @@ def get_cities():
         return cities
     except Exception:
         fallback = [
-        {"name": "Victoria", "latitude": 48.4284, "longitude": -123.3656},
-        {"name": "Vancouver", "latitude": 49.2827, "longitude": -123.1207},
-        {"name": "Kelowna", "latitude": 49.8880, "longitude": -119.4960},
-        {"name": "Burnaby", "latitude": 49.2488, "longitude": -122.9805},
-        {"name": "Richmond", "latitude": 49.1666, "longitude": -123.1336},
-        {"name": "Surrey", "latitude": 49.1044, "longitude": -122.8011},
-    ]
-    return fallback
+            {"name": "Victoria", "latitude": 48.4284, "longitude": -123.3656},
+            {"name": "Vancouver", "latitude": 49.2827, "longitude": -123.1207},
+            {"name": "Kelowna", "latitude": 49.8880, "longitude": -119.4960},
+            {"name": "Burnaby", "latitude": 49.2488, "longitude": -122.9805},
+            {"name": "Richmond", "latitude": 49.1666, "longitude": -123.1336},
+            {"name": "Surrey", "latitude": 49.1044, "longitude": -122.8011},
+        ]
+        return fallback
 
 def index(request):
     cities = get_cities()
@@ -70,7 +72,7 @@ def index(request):
 
             route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
             headers = {
-                "Authorization": ORS_API_KEY 
+                "Authorization": ORS_API_KEY
             }
             params = {
                 "start": f"{start_coords['longitude']},{start_coords['latitude']}",
