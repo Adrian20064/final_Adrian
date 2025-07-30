@@ -14,14 +14,15 @@ db = client["travel_db"]
 history_collection = db["queries"]
 
 GEO_DB_API_URL = os.getenv("geo_db_url")
-GEO_DB_KEY = os.getenv("geo_db_key")
 OPENWEATHER_API_KEY = os.getenv("weather_api_key")
 OPENROUTE_API_KEY = os.getenv("heigit_key")
 
 def get_weather(city):
     try:
         response = requests.get(
-            f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={OPENWEATHER_API_KEY}&units=metric"
+            f"http://api.openweathermap.org/data/2.5/weather",
+            params={"q": city, "appid": OPENWEATHER_API_KEY, "units": "metric"},
+            timeout=5
         )
         response.raise_for_status()
         data = response.json()
@@ -31,11 +32,11 @@ def get_weather(city):
 
 def get_cities():
     try:
-        response = requests.get(GEO_DB_API_URL)
+        response = requests.get(GEO_DB_API_URL, timeout=5)
         response.raise_for_status()
         cities = response.json().get("data", [])
         if not cities:
-            raise Exception()
+            raise Exception("Empty cities list")
         return cities
     except Exception:
         fallback = ["Victoria", "Vancouver", "Kelowna", "Burnaby", "Richmond", "Surrey"]
@@ -43,7 +44,6 @@ def get_cities():
 
 def index(request):
     cities = get_cities()
-    form = TripForm(cities=cities)
 
     if request.method == "POST":
         form = TripForm(request.POST, cities=cities)
@@ -61,16 +61,19 @@ def index(request):
                 error = "Error: Could not find city coordinates."
                 return render(request, "guides/index.html", {"form": form, "error": error})
 
-            route_url = (
-                f"https://api.openrouteservice.org/v2/directions/driving-car"
-                f"?api_key={OPENROUTE_API_KEY}"
-                f"&start={start_coords['longitude']},{start_coords['latitude']}"
-                f"&end={end_coords['longitude']},{end_coords['latitude']}"
-            )
-            route_data = requests.get(route_url).json()
+            route_url = "https://api.openrouteservice.org/v2/directions/driving-car"
+            params = {
+                "api_key": OPENROUTE_API_KEY,
+                "start": f"{start_coords['longitude']},{start_coords['latitude']}",
+                "end": f"{end_coords['longitude']},{end_coords['latitude']}",
+            }
+            route_response = requests.get(route_url, params=params, timeout=10)
+            route_response.raise_for_status()
+            route_data = route_response.json()
 
-            distance = route_data["features"][0]["properties"]["summary"]["distance"] / 1000
-            duration = route_data["features"][0]["properties"]["summary"]["duration"] / 60
+            summary = route_data["features"][0]["properties"]["summary"]
+            distance = summary["distance"] / 1000
+            duration = summary["duration"] / 60
             steps = [step["instruction"] for step in route_data["features"][0]["properties"]["segments"][0]["steps"]]
 
             advice = "Good time to start your trip!" if "rain" not in start_weather.lower() else "Consider delaying your trip."
@@ -93,6 +96,8 @@ def index(request):
                 "steps": steps,
                 "advice": advice
             })
+    else:
+        form = TripForm(cities=cities)
 
     return render(request, "guides/index.html", {"form": form})
 

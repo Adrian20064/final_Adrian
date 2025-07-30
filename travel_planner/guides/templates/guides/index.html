@@ -2,27 +2,17 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Smart Travel Planner</title>
   </head>
   <body>
     <h1>Smart Travel Planner - Adrian Carrasco</h1>
     <form method="POST">
-      {% csrf_token %}
-      <label for="start_city">Start City:</label>
-      <select name="start_city" id="start_city" required>
-        {% for city in cities %}
-        <option value="{{ city.name }}">{{ city.name }}</option>
-        {% endfor %}
-      </select>
-      <br /><br />
-      <label for="end_city">End City:</label>
-      <select name="end_city" id="end_city" required>
-        {% for city in cities %}
-        <option value="{{ city.name }}">{{ city.name }}</option>
-        {% endfor %}
-      </select>
-      <br /><br />
+      {% csrf_token %} {{ form.start_city.label_tag }}<br />
+      {{ form.start_city }}<br /><br />
+
+      {{ form.end_city.label_tag }}<br />
+      {{ form.end_city }}<br /><br />
+
       <button type="submit">Plan Trip</button>
     </form>
 
