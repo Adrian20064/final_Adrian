@@ -201,7 +201,8 @@ def result(request):
    
     return HttpResponse("Method Not Allowed", status=405)
 
-
 def history(request):
     results = list(history_collection.find().sort("_id", -1))
+    for r in results:
+        r["_id"] = str(r["_id"]) 
     return render(request, "guides/history.html", {"results": results})

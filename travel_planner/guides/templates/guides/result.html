@@ -13,11 +13,8 @@
 <h3>Recommended Route</h3>
 <p><strong>Distance:</strong> {{ route.distance }} km</p>
 <p>
-  <strong>Estimated driving time:</strong>
-  {% with total_minutes=route.duration|floatformat:0 %} {% with
-  hours=total_minutes|divisibleby:60 %} {% if hours > 0 %} {{
-  total_minutes|divisibleby:60 }}h {% endif %} {{ total_minutes|mod:60 }}m {%
-  endwith %} {% endwith %}
+  <strong>Estimated driving time:</strong> {{ duration_hours }}h {{
+  duration_remainder }}m
 </p>
 
 <h4>Route Steps:</h4>
@@ -29,3 +26,6 @@
 
 <h3>Advice:</h3>
 <p>{{ advice }}</p>
+
+<a href="{% url 'history' %}">View Trip History</a>
+<a href="{% url 'index' %}">Plan Another Trip</a>

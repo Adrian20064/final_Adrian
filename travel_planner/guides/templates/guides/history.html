@@ -1,18 +1,21 @@
-<!DOCTYPE html>
-<html>
-  <head>
-    <title>History</title>
-  </head>
-  <body>
-    <h2>Travel Query History</h2>
-    <ul>
-      {% for record in results %}
-      <li>
-        {{ record.timestamp }} - {{ record.start_city }} to {{ record.end_city
-        }} ({{ record.route.distance }} km)
-      </li>
-      {% endfor %}
-    </ul>
-    <a href="/">Back to Planner</a>
-  </body>
-</html>
+<h1>Trip History</h1>
+
+{% if results %} {% for item in results %}
+<div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 15px">
+  <p><strong>Start City:</strong> {{ item.start_city }}</p>
+  <p><strong>End City:</strong> {{ item.end_city }}</p>
+  <p><strong>Date:</strong> {{ item.timestamp }}</p>
+  <p><strong>Distance:</strong> {{ item.route.distance }} km</p>
+  <p><strong>Duration:</strong> {{ item.route.duration }} minutes</p>
+  <p><strong>Steps:</strong></p>
+  <ol>
+    {% for step in item.route.steps %}
+    <li>{{ step.text }} ({{ step.distance }} m)</li>
+    {% endfor %}
+  </ol>
+</div>
+{% endfor %} {% else %}
+<p>No trip history found.</p>
+{% endif %}
+
+<a href="{% url 'index' %}">Plan another trip</a>
