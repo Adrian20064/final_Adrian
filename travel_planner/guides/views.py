@@ -132,6 +132,7 @@ def get_advice(weather, time):
 def index(request):
     cities = get_bc_cities()
     return render(request, 'guides/index.html', {"cities": cities})
+from django.http import HttpResponse  # add this import if missing
 
 def result(request):
     if request.method == "POST":
@@ -160,16 +161,6 @@ def result(request):
             }
             history_collection.insert_one(entry)
 
-           
-            print("Rendering result.html with context:")
-            print({
-                "start": start,
-                "end": end,
-                "start_weather": start_weather,
-                "end_weather": end_weather,
-                "route": route,
-                "advice": advice
-            })
 
             return render(request, 'guides/result.html', {
                 "start": start,
@@ -181,13 +172,11 @@ def result(request):
             })
 
         except Exception as e:
-            print(f"Error in result view: {e}")
-            
-            return HttpResponse(f"<h1>Error:</h1><pre>{e}</pre>")
+          
+            messages.error(request, f"Error processing request: {e}")
+            return redirect("index")
 
-   
     return HttpResponse("Method Not Allowed", status=405)
-
 
 def history(request):
     results = list(history_collection.find().sort("_id", -1))
