@@ -66,7 +66,16 @@ def geocode_city(city_name):
     coords = data["features"][0]["geometry"]["coordinates"]  # [lon, lat]
     return {"lon": coords[0], "lat": coords[1]}
 
+
+def coords_valid(coord):
+    lat, lon = coord["lat"], coord["lon"]
+    
+    return 48 <= lat <= 52 and -130 <= lon <= -115
+
 def get_route(start_coords, end_coords):
+    if not (coords_valid(start_coords) and coords_valid(end_coords)):
+        raise ValueError(f"Coordinates out of BC range: start={start_coords}, end={end_coords}")
+
     url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
     headers = {
         "Authorization": ROUTES_API_KEY,
@@ -81,12 +90,13 @@ def get_route(start_coords, end_coords):
     res = requests.post(url, json=body, headers=headers)
     data = res.json()
 
-    
+    if "error" in data:
+        raise ValueError(f"Route API error: {data['error']['message']}")
+
     if "features" in data and data["features"]:
         route = data["features"][0]["properties"]
         segment = route["segments"][0]
 
-    
     elif "routes" in data and data["routes"]:
         route = data["routes"][0]
         segment = route["segments"][0]
@@ -95,8 +105,8 @@ def get_route(start_coords, end_coords):
         raise ValueError(f"Route API error or no route found: {data}")
 
     return {
-        "distance": round(segment["distance"] / 1000, 2),  # km
-        "duration": round(segment["duration"] / 60, 2),   # minutos
+        "distance": round(segment["distance"] / 1000, 2),  
+        "duration": round(segment["duration"] / 60, 2), 
         "steps": [
             {
                 "text": step["instruction"],
@@ -104,7 +114,6 @@ def get_route(start_coords, end_coords):
             } for step in segment["steps"]
         ]
     }
-
 
 def get_advice(weather, time):
     if weather["desc"] in ["clear sky", "few clouds"] and 6 <= time.hour <= 18:
