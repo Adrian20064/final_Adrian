@@ -132,7 +132,6 @@ def get_advice(weather, time):
 def index(request):
     cities = get_bc_cities()
     return render(request, 'guides/index.html', {"cities": cities})
-from django.http import HttpResponse  # add this import if missing
 
 def result(request):
     if request.method == "POST":
@@ -161,6 +160,20 @@ def result(request):
             }
             history_collection.insert_one(entry)
 
+            duration_minutes = route["duration"]
+            duration_hours = int(duration_minutes // 60)
+            duration_remainder = int(duration_minutes % 60)
+
+            print({
+                "start": start,
+                "end": end,
+                "start_weather": start_weather,
+                "end_weather": end_weather,
+                "route": route,
+                "advice": advice, 
+                "duration_hours": duration_hours,
+                "duration_remainder": duration_remainder,
+            })
 
             return render(request, 'guides/result.html', {
                 "start": start,
@@ -168,15 +181,19 @@ def result(request):
                 "start_weather": start_weather,
                 "end_weather": end_weather,
                 "route": route,
-                "advice": advice
+                "advice": advice,
+                "duration_hours": duration_hours,
+                "duration_remainder": duration_remainder,
             })
 
         except Exception as e:
-          
-            messages.error(request, f"Error processing request: {e}")
-            return redirect("index")
+            print(f"Error in result view: {e}")
+            
+            return HttpResponse(f"<h1>Error:</h1><pre>{e}</pre>")
 
+   
     return HttpResponse("Method Not Allowed", status=405)
+
 
 def history(request):
     results = list(history_collection.find().sort("_id", -1))
