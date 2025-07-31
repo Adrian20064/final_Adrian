@@ -51,6 +51,49 @@ def get_weather_by_coords(lat, lon):
         "desc": data["weather"][0]["description"],
         "coord": {"lat": lat, "lon": lon}
     }
+    
+def geocode_city(city_name):
+    url = "https://api.openrouteservice.org/geocode/search"
+    headers = {"Authorization": ROUTES_API_KEY}
+    params = {"text": city_name, "size": 1}
+    res = requests.get(url, headers=headers, params=params)
+    data = res.json()
+    
+    if "features" not in data or not data["features"]:
+        raise ValueError(f"City '{city_name}' not found")
+    
+    coords = data["features"][0]["geometry"]["coordinates"]  # [lon, lat]
+    return {"lon": coords[0], "lat": coords[1]}
+
+def get_route(start_coords, end_coords):
+    url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
+    headers = {
+        "Authorization": ROUTES_API_KEY,
+        "Content-Type": "application/json"
+    }
+    body = {
+        "coordinates": [
+            [start_coords["lon"], start_coords["lat"]],
+            [end_coords["lon"], end_coords["lat"]]
+        ]
+    }
+    res = requests.post(url, json=body, headers=headers)
+    data = res.json()
+    
+    if "features" not in data or not data["features"]:
+        raise ValueError(f"Route API error or no route found: {data}")
+    
+    route = data["features"][0]["properties"]
+    return {
+        "distance": round(route["segments"][0]["distance"] / 1000, 2),
+        "duration": round(route["segments"][0]["duration"] / 60, 2),
+        "steps": [
+            {
+                "text": step["instruction"],
+                "distance": round(step["distance"], 1)
+            } for step in route["segments"][0]["steps"]
+        ]
+    }
 
 def get_route(start_coords, end_coords):
     url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
@@ -123,6 +166,7 @@ def result(request):
             messages.error(request, f"Error processing request: {e}")
             return redirect("index")
     return redirect("index")
+
 
 def history(request):
     results = list(history_collection.find().sort("_id", -1))
