@@ -95,7 +95,6 @@ def get_route(start_coords, end_coords):
             } for step in route["segments"][0]["steps"]
         ]
     }
-
 def get_route(start_coords, end_coords):
     url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
     headers = {
@@ -110,17 +109,25 @@ def get_route(start_coords, end_coords):
     }
     res = requests.post(url, json=body, headers=headers)
     data = res.json()
-    if "features" not in data or not data["features"]:
+
+    if "features" in data and data["features"]:
+        route = data["features"][0]["properties"]
+        segments = route["segments"][0]
+    
+    elif "routes" in data and data["routes"]:
+        route = data["routes"][0]
+        segments = route["segments"][0]
+    else:
         raise ValueError(f"Route API error or no route found: {data}")
-    route = data["features"][0]["properties"]
+
     return {
-        "distance": round(route["segments"][0]["distance"] / 1000, 2),
-        "duration": round(route["segments"][0]["duration"] / 60, 2),
+        "distance": round(segments["distance"] / 1000, 2),
+        "duration": round(segments["duration"] / 60, 2),
         "steps": [
             {
                 "text": step["instruction"],
                 "distance": round(step["distance"], 1)
-            } for step in route["segments"][0]["steps"]
+            } for step in segments["steps"]
         ]
     }
 
