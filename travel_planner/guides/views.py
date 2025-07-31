@@ -95,41 +95,7 @@ def get_route(start_coords, end_coords):
             } for step in route["segments"][0]["steps"]
         ]
     }
-def get_route(start_coords, end_coords):
-    url = "https://api.openrouteservice.org/v2/directions/driving-car/json"
-    headers = {
-        "Authorization": ROUTES_API_KEY,
-        "Content-Type": "application/json"
-    }
-    body = {
-        "coordinates": [
-            [start_coords["lon"], start_coords["lat"]],
-            [end_coords["lon"], end_coords["lat"]]
-        ]
-    }
-    res = requests.post(url, json=body, headers=headers)
-    data = res.json()
 
-    if "features" in data and data["features"]:
-        route = data["features"][0]["properties"]
-        segments = route["segments"][0]
-    
-    elif "routes" in data and data["routes"]:
-        route = data["routes"][0]
-        segments = route["segments"][0]
-    else:
-        raise ValueError(f"Route API error or no route found: {data}")
-
-    return {
-        "distance": round(segments["distance"] / 1000, 2),
-        "duration": round(segments["duration"] / 60, 2),
-        "steps": [
-            {
-                "text": step["instruction"],
-                "distance": round(step["distance"], 1)
-            } for step in segments["steps"]
-        ]
-    }
 
 def get_advice(weather, time):
     if weather["desc"] in ["clear sky", "few clouds"] and 6 <= time.hour <= 18:
