@@ -3,6 +3,7 @@ from datetime import datetime
 from django.shortcuts import render, redirect
 from .forms import TravelForm
 from pymongo import MongoClient
+from django.http import HttpResponse
 from django.contrib import messages
 
 GEO_API_KEY = "7a15765511msh56a61309a87d00cp1483f3jsn949e5ba2536c"
@@ -134,19 +135,23 @@ def index(request):
 
 def result(request):
     if request.method == "POST":
-        if request.method == "POST":
-            start = request.POST.get('start_city')
-            end = request.POST.get('end_city')
+        start = request.POST.get('start_city')
+        end = request.POST.get('end_city')
+
         if not start or not end:
             messages.error(request, "Please select both start and end cities.")
             return redirect("index")
+
         try:
             start_coords = get_city_coords(start)
             end_coords = get_city_coords(end)
+
             start_weather = get_weather_by_coords(start_coords["lat"], start_coords["lon"])
             end_weather = get_weather_by_coords(end_coords["lat"], end_coords["lon"])
+
             route = get_route(start_coords, end_coords)
             advice = get_advice(start_weather, datetime.now())
+
             entry = {
                 "start_city": start,
                 "end_city": end,
@@ -154,6 +159,18 @@ def result(request):
                 "route": route
             }
             history_collection.insert_one(entry)
+
+           
+            print("Rendering result.html with context:")
+            print({
+                "start": start,
+                "end": end,
+                "start_weather": start_weather,
+                "end_weather": end_weather,
+                "route": route,
+                "advice": advice
+            })
+
             return render(request, 'guides/result.html', {
                 "start": start,
                 "end": end,
@@ -162,11 +179,14 @@ def result(request):
                 "route": route,
                 "advice": advice
             })
+
         except Exception as e:
             print(f"Error in result view: {e}")
-            messages.error(request, f"Error processing request: {e}")
-            return redirect("index")
-    return redirect("index")
+            
+            return HttpResponse(f"<h1>Error:</h1><pre>{e}</pre>")
+
+   
+    return HttpResponse("Method Not Allowed", status=405)
 
 
 def history(request):
