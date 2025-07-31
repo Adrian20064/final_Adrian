@@ -134,8 +134,9 @@ def index(request):
 
 def result(request):
     if request.method == "POST":
-        start = request.POST.get('start_city')
-        end = request.POST.get('end_city')
+        if request.method == "POST":
+            start = request.POST.get('start_city')
+            end = request.POST.get('end_city')
         if not start or not end:
             messages.error(request, "Please select both start and end cities.")
             return redirect("index")
